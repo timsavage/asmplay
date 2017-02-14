@@ -3,6 +3,14 @@
 
 .equ WAVE_BUFFER, 0x0100
 
+.equ INDEX, r25
+.equ STEPHH, r24
+.equ STEPH, r23
+.equ STEPL, r22
+.equ FIXH, r21
+.equ FIXL, r20
+.equ STATUS, r19
+
 ; Load a wave table into the wave buffer (lo8 bits of loc must be 0)
 .macro LOAD_TABLE loc
 	ldi	ZH, hi8(\loc)
@@ -17,30 +25,45 @@ copy_loop\@:
 .endm
 
 
-
 .text
 .org 0x0000
-                jmp     RESET
+	jmp     RESET
 
 .org 0x0034 ; End of Jump table
-RESET:          ser     r16
-                out     DDRD, r16
-
-                clr     r16
-                out     PORTD, r16
+RESET:
+	ser     r16		; Configure PORTD for output 
+	out     DDRD, r16
+	clr     r16		; Clear the current output
+	out     PORTD, r16
 
 MAIN:           
-		LOAD_TABLE	square_table
+	LOAD_TABLE	square_table	; Setup some sane defaults
 
-		ldi     XH, hi8(WAVE_BUFFER)
-		ldi     XL, lo8(WAVE_BUFFER)
-		ldi	r17, 0x30
-		add	XL, r17
-		ld      r16, X
-		out     PORTD, r16
+	ldi	r24, 0x00	; Set a basic default value
+	ldi	r23, 0x35	; of ~1KHz
+	ldi	r22, 0x55
+	ldi	r19, 1		; Set active bit	
 
-loop:           sleep
-                rjmp    loop;
+HOLD:
+	sbrs	r19, 0		; Check status bit 0 (Active bit)
+	rjmp	HOLD	
+
+START_DDS:
+	clr	r25		; Index
+	clr	r20		; Fix L
+	clr	r21		; Fix H
+	ldi	YH, hi8(WAVE_BUFFER)
+	ldi	YL, lo8(WAVE_BUFFER)
+
+DDS_LOOP:
+	add	r20, r22	; Step into temp (1 clock)
+	adc	r21, r23	; (1 clock)
+	adc	YL, r24		; (1 clock)
+	ld	r25, Y		; (2 clocks)
+	out	PORTD, r25	; (1 clock)
+	sbrc	r19, 0		; (1 clock, if unset)
+	rjmp	DDS_LOOP	; (2 clocks)
+	rjmp	HOLD		; (Total: 9)
 
 
 .org 0x0100	; Ensure alignment of tables is 0xXX00
