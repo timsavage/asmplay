@@ -43,9 +43,9 @@ MAIN:
 
 		ldi     XH, hi8(0x0100)
 		ldi     XL, lo8(0x0100)
-		ld      r16, X
 		ldi	r17, 3
-		add	r16, r17
+		add	XL, r17
+		ld      r16, X
 		out     PORTD, r16
 
 loop:           sleep
