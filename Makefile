@@ -4,25 +4,25 @@ PROGRAMMER=usbtiny
 
 all: hex size
 
-hex: eek.hex
+hex: dds.hex
 
 up: hex size
-	avrdude -c $(PROGRAMMER) -p $(MCU) -U flash:w:eek.hex
+	avrdude -c $(PROGRAMMER) -p $(MCU) -U flash:w:dds.hex
 
-size: eek.elf
+size: dds.elf
 	avr-size --mcu $(MCU) -C $<
 
 clean:
-	rm *.o
-	rm *.elf
-	rm *.hex
+	rm -f *.o
+	rm -f *.elf
+	rm -f *.hex
 
-eek.hex: eek.elf
+dds.hex: dds.elf
 	avr-objcopy -j .text -j .data -O ihex $< $@
 
-eek.elf: eek.o
+dds.elf: dds.o
 	avr-ld -o $@ $<
 
-eek.o: eek.S
+dds.o: dds.S
 	avr-as -mmcu=$(MCU) -o $@ $<
 
