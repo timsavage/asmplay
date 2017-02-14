@@ -6,7 +6,7 @@ all: hex size
 
 hex: eek.hex
 
-upload: hex size
+up: hex size
 	avrdude -c $(PROGRAMMER) -p $(MCU) -U flash:w:eek.hex
 
 size: eek.elf
