@@ -1,15 +1,43 @@
-.equ PORTD, 0x0B
-.equ DDRD, 0x0A
+;==========================================================
+; DDS Generator for ATMega328p
+;==========================================================
+;
+; Author: Tim Savage <tim@savage.company>
+;
+;==========================================================
+
+;==========================================================
+; Registers
+;==========================================================
+;
+; r16	Temp
+; r19	Status (0 = Active)
+;
+; These registers are used to generate DDS Output
+; r20	Fix Low
+; r21	Fix High
+; r22	Step Byte 0
+; r23	Step Byte 1
+; r24	Step Byte 2
+; r25	Index
+; 
+
+;==========================================================
+; Definitions
+;==========================================================
+
+.equ DDRD, 0x2A		; Port D Data Direction Register
+.equ PORTD, 0x2B	; Port D Data Register
+
+.equ TWAR, 0xBA		; TWI (Slave) Address Register
+.equ TWDR, 0xBB 	; TWI Data Register
+.equ TWCR, 0xBC 	; TWI Control Register
 
 .equ WAVE_BUFFER, 0x0100
 
-.equ INDEX, r25
-.equ STEPHH, r24
-.equ STEPH, r23
-.equ STEPL, r22
-.equ FIXH, r21
-.equ FIXL, r20
-.equ STATUS, r19
+;==========================================================
+; Macros
+;==========================================================
 
 ; Load a wave table into the wave buffer (lo8 bits of loc must be 0)
 .macro LOAD_TABLE loc
@@ -24,47 +52,84 @@ copy_loop\@:
 	brne	copy_loop\@
 .endm
 
+;==========================================================
+; Boot section - Jump table
+;==========================================================
 
 .text
 .org 0x0000
 	jmp     RESET
 
+.org 0x0030 ; TWI Interrupt
+	jmp	I2C_INT
+
+;==========================================================
+; Code
+;==========================================================
+
 .org 0x0034 ; End of Jump table
 RESET:
-	ser     r16		; Configure PORTD for output 
-	out     DDRD, r16
+	; Setup Port D for DDS Output
+	ser     r16		; Configure for output 
+	sts     DDRD, r16
 	clr     r16		; Clear the current output
-	out     PORTD, r16
+	sts     PORTD, r16
 
-MAIN:           
-	LOAD_TABLE	square_table	; Setup some sane defaults
+	; Configure I2C (TWI) interface
+	ldi	r16, 0x84	; Set address to 0x42
+	sts	TWAR, r16
+	ldi	r16, 0x44	; Enable Ack and TWI
+	sts	TWCR, r16
+	
+	sei			; Enable interupts
 
+MAIN:   
+	; Setup some defaults        
+	LOAD_TABLE	sine_table
 	ldi	r24, 0x00	; Set a basic default value
 	ldi	r23, 0x35	; of ~1KHz
 	ldi	r22, 0x55
-	ldi	r19, 1		; Set active bit	
+	ldi	r19, 0		; Clear status register	
 
 HOLD:
+	;sleep			; Sleep and wait for a command
 	sbrs	r19, 0		; Check status bit 0 (Active bit)
 	rjmp	HOLD	
 
 START_DDS:
+	; Reset counters
 	clr	r25		; Index
 	clr	r20		; Fix L
 	clr	r21		; Fix H
+	
+	; Set wave buffer pointer to the start of the wave buffer
 	ldi	YH, hi8(WAVE_BUFFER)
 	ldi	YL, lo8(WAVE_BUFFER)
 
 DDS_LOOP:
-	add	r20, r22	; Step into temp (1 clock)
+	; Add step value
+	add	r20, r22	; (1 clock)
 	adc	r21, r23	; (1 clock)
 	adc	YL, r24		; (1 clock)
+
+	; Load value from wave buffer
 	ld	r25, Y		; (2 clocks)
-	out	PORTD, r25	; (1 clock)
+
+	; Write value to PORTD (use out as it only uses 1 clock)
+	out	(PORTD-0x20), r25	; (1 clock)
+
+	; Check if DDS generation is still active
 	sbrc	r19, 0		; (1 clock, if unset)
 	rjmp	DDS_LOOP	; (2 clocks)
 	rjmp	HOLD		; (Total: 9)
 
+I2C_INT:
+	
+	reti
+
+;==========================================================
+; Waveform tables
+;==========================================================
 
 .org 0x0100	; Ensure alignment of tables is 0xXX00
 sine_table:
