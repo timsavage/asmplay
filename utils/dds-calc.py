@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import print_function, division, unicode_literals
 
 import argparse
@@ -17,7 +18,7 @@ def get_args():
                         help="Frequency of MCU")
     parser.add_argument("--cfreq-unit", dest='freq_unit', choices=FREQ_SCALE.keys(), default="MHz",
                         help="Unit/Multiplier of cfreq value, default is Mhz")
-    parser.add_argument("-p", "--cpc", dest="clocks_per_cycle", default=9, type=int,
+    parser.add_argument("-p", "--cpc", dest="clocks_per_cycle", default=8, type=int,
                         help="Number of clock ticks in each cycle of DDS loop.")
     parser.add_argument("-t", "--table-size", dest="table_size", default=256, type=int,
                         help="Size of DDS wave table (this should be 256)")
