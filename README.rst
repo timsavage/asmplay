@@ -9,4 +9,4 @@ Includes wave tables for Sine, Sawtooth, Reverse Sawtooth, Triangle and Square w
 
 Configure the Make file to specify your programmer (default is *usbtiny*). 
 
-Code is currently very much proof of concept, is this far is just loading the wave table into SRAM and not actually outputting a waveform.
+Code has progressed into an Alpha state, is outputting a waveform. I2C interface is beginning development.
