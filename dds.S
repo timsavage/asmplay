@@ -15,6 +15,7 @@
 ; - Additional waveform(s)
 ;
 ;==========================================================
+.include "atmega328p.inc"
 
 ;==========================================================
 ; Registers
@@ -34,14 +35,6 @@
 ;==========================================================
 ; Definitions
 ;==========================================================
-
-.equ DDRD, 0x2A		; Port D Data Direction Register
-.equ PORTD, 0x2B	; Port D Data Register
-
-.equ TWAR, 0xBA		; TWI (Slave) Address Register
-.equ TWDR, 0xBB 	; TWI Data Register
-.equ TWCR, 0xBC 	; TWI Control Register
-
 .equ WAVE_BUFFER, 0x0100
 
 ;==========================================================
@@ -66,31 +59,63 @@ copy_loop\@:
 ;==========================================================
 
 .text
-.org 0x0000
-	jmp     RESET
+.org RESET_addr
+rjmp	RESET	; RESET_addr
+reti		; INT0_addr
+reti		; INT1_addr
+reti		; PCINT0_addr
+reti		; PCINT1_addr
+reti		; PCINT2_addr
+reti		; WDT_addr
+reti		; TIMER2_COMPA_addr
+reti		; TIMER2_COMPB_addr
+reti		; TIMER2_OVF_addr
+reti		; TIMER1_CAPT_addr
+reti		; TIMER1_COMPA_addr
+reti		; TIMER1_COMPB_addr
+reti		; TIMER1_OVF_addr
+reti		; TIMER0_COMPA_addr
+reti		; TIMER0_COMPB_addr
+reti		; TIMER0_OVF_addr
+reti		; SPI_STC_addr
+reti		; USART_RX_addr
+reti		; USART_UDRE_addr
+reti		; USART_TX_addr
+reti		; ADC_addr
+reti		; EE_READY_addr
+reti		; ANALOG_COMP_addr
+rjmp	TWI	; TWI_addr
+reti		; SPM_READY_addr
 
-.org 0x0030 ; TWI Interrupt
-	jmp	I2C_INT
 
 ;==========================================================
 ; Code
 ;==========================================================
 
-.org 0x0034 ; End of Jump table
+;.org 0x0034 ; End of Jump table
 RESET:
+	; Setup stack pointer
+	;ldi	r16, hi8(RAMEND)
+	;out	_SPH, r16
+	;ldi	r16, lo8(RAMEND)
+	;out	_SPL, r16
+
 	; Setup Port D for DDS Output
-	ser     r16		; Configure for output 
-	sts     DDRD, r16
-	clr     r16		; Clear the current output
-	sts     PORTD, r16
+	ser	r16		; Configure for output 
+	out	_DDRD, r16
+	clr	r16		; Clear the current output
+	out	_PORTD, r16
 
 	; Configure I2C (TWI) interface
-	ldi	r16, 0x84	; Set address to 0x42
+	ldi	r16, (0x42<<1)	; Set address to 0x42
 	sts	TWAR, r16
-	ldi	r16, 0x44	; Enable Ack and TWI
+	ldi	r16, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE)	; Enable Ack and TWI
 	sts	TWCR, r16
+
+	lds	r16, TWCR
+	out	_PORTD, r16
 	
-	sei			; Enable interupts
+	sei			; Enable interrupts
 
 MAIN:   
 	; Setup some defaults        
@@ -100,6 +125,7 @@ MAIN:
 	ldi	r22, 0xC5
 
 HOLD:
+	out	_PORTD, r25
 	;sleep			; Sleep and wait for a command
 	rjmp	HOLD		; Temp to block us while developing I2C
 
@@ -123,21 +149,22 @@ DDS_LOOP:
 	ld	r25, Y		; (2 clocks)
 
 	; Write value to PORTD (use out as it only uses 1 clock)
-	out	(PORTD-0x20), r25	; (1 clock)
+	out	_PORTD, r25	; (1 clock)
 
 	; Check if DDS generation is still active
 	rjmp	DDS_LOOP	; (2 clocks)
 				; (Total: 8)
 
-I2C_INT:
-	
+TWI:
+	ldi	r25, 2
 	reti
+
 
 ;==========================================================
 ; Waveform tables
 ;==========================================================
 
-.org 0x0100	; Ensure alignment of tables is 0xXX00
+.org 0x0500	; Ensure alignment of tables is 0xXX00
 zero_table:	; Aligned to center of the display
         .byte   0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F
         .byte   0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F
