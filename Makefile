@@ -9,6 +9,9 @@ hex: dds.hex
 up: hex size
 	avrdude -c $(PROGRAMMER) -p $(MCU) -U flash:w:dds.hex
 
+fuse:
+	avrdude -c $(PROGRAMMER) -p $(MCU) -U lfuse:w:0xf7:m -U hfuse:w:0xdf:m
+
 size: dds.elf
 	avr-size --mcu $(MCU) -C $<
 
