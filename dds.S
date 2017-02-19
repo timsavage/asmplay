@@ -16,6 +16,7 @@
 ;
 ;==========================================================
 .include "atmega328p.inc"
+.include "twi_utils.asm"
 
 ;==========================================================
 ; Registers
@@ -37,6 +38,10 @@
 ;==========================================================
 .equ WAVE_BUFFER, 0x0100
 
+.equ TWI_ACK, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE) 
+.equ TWI_NACK, (1<<TWINT) | (0<<TWEA) | (1<<TWEN) | (1<<TWIE) 
+
+
 ;==========================================================
 ; Macros
 ;==========================================================
@@ -52,6 +57,16 @@ copy_loop\@:
 	st	X+, r0		; Copy into data memory
 	cpi	ZL, 0x00	; Check if we have rolled over
 	brne	copy_loop\@
+.endm
+
+.macro SEND_ACK
+	ldi	r16, TWI_ACK
+	sts	TWCR, r16
+.endm
+
+.macro SEND_NACK
+	ldi	r16, TWI_NACK
+	sts	TWCR, r16
 .endm
 
 ;==========================================================
@@ -94,17 +109,16 @@ __vectors:
 ;==========================================================
 
 __ctors_end:
-	; Setup stack pointer
-	;ldi	r16, hi8(RAMEND)
-	;out	_SPH, r16
-	;ldi	r16, lo8(RAMEND)
-	;out	_SPL, r16
+	; Stack pointer setup not required 
+	; atmega328(p) defaults to RAMEND
 	rjmp 	MAIN
 
 __bad_interrupt:
 	reti
 
 MAIN:   
+	cli			; Disable interrupts
+
 	; Setup Port D for DDS Output
 	ser	r16		; Configure for output 
 	out	_DDRD, r16
@@ -114,8 +128,9 @@ MAIN:
 	; Configure I2C (TWI) interface
 	ldi	r16, (0x42<<1)	; Set address to 0x42
 	sts	TWAR, r16
-	ldi	r16, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE)	; Enable Ack and TWI
-	sts	TWCR, r16
+	SEND_ACK
+;	ldi	r16, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE)	; Enable Ack and TWI
+;	sts	TWCR, r16
 
 	lds	r16, TWCR
 	out	_PORTD, r16
@@ -160,7 +175,21 @@ DDS_LOOP:
 				; (Total: 8)
 
 TWI:
-	ldi	r25, 2
+	lds     r16, TWSR	; Load from status register
+	andi	r16, TW_STATUS_MASK	; Mask out pre-scaler bits
+	
+	cpi	r16, TW_ST_SLA_ACK
+	brne	twi_2
+	; Own address has been acknowledged
+	rjmp	twi_default
+twi_2:
+	cpi	r16, TW_SR_DATA_ACK
+	brne	twi_default
+	; Data has been received in SR Mode
+	lds	r25, TWDR	; Store data in r25
+twi_default:
+	SEND_ACK
+twi_exit:
 	reti
 
 
@@ -168,7 +197,7 @@ TWI:
 ; Waveform tables
 ;==========================================================
 
-.org 0x0500	; Ensure alignment of tables is 0xXX00
+.org 0x0200	; Ensure alignment of tables is 0xXX00
 zero_table:	; Aligned to center of the display
         .byte   0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F
         .byte   0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F,0x7F
