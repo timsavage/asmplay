@@ -59,47 +59,52 @@ copy_loop\@:
 ;==========================================================
 
 .text
-.org RESET_addr
-rjmp	RESET	; RESET_addr
-reti		; INT0_addr
-reti		; INT1_addr
-reti		; PCINT0_addr
-reti		; PCINT1_addr
-reti		; PCINT2_addr
-reti		; WDT_addr
-reti		; TIMER2_COMPA_addr
-reti		; TIMER2_COMPB_addr
-reti		; TIMER2_OVF_addr
-reti		; TIMER1_CAPT_addr
-reti		; TIMER1_COMPA_addr
-reti		; TIMER1_COMPB_addr
-reti		; TIMER1_OVF_addr
-reti		; TIMER0_COMPA_addr
-reti		; TIMER0_COMPB_addr
-reti		; TIMER0_OVF_addr
-reti		; SPI_STC_addr
-reti		; USART_RX_addr
-reti		; USART_UDRE_addr
-reti		; USART_TX_addr
-reti		; ADC_addr
-reti		; EE_READY_addr
-reti		; ANALOG_COMP_addr
-rjmp	TWI	; TWI_addr
-reti		; SPM_READY_addr
+.org 0x0000
+__vectors:
+	jmp 	__ctors_end	; RESET_addr
+	jmp 	__bad_interrupt	; INT0_addr
+	jmp 	__bad_interrupt	; INT1_addr
+	jmp 	__bad_interrupt	; PCINT0_addr
+	jmp 	__bad_interrupt	; PCINT1_addr
+	jmp 	__bad_interrupt	; PCINT2_addr
+	jmp 	__bad_interrupt	; WDT_addr
+	jmp 	__bad_interrupt	; TIMER2_COMPA_addr
+	jmp 	__bad_interrupt	; TIMER2_COMPB_addr
+	jmp 	__bad_interrupt	; TIMER2_OVF_addr
+	jmp 	__bad_interrupt	; TIMER1_CAPT_addr
+	jmp 	__bad_interrupt	; TIMER1_COMPA_addr
+	jmp 	__bad_interrupt	; TIMER1_COMPB_addr
+	jmp 	__bad_interrupt	; TIMER1_OVF_addr
+	jmp 	__bad_interrupt	; TIMER0_COMPA_addr
+	jmp 	__bad_interrupt	; TIMER0_COMPB_addr
+	jmp 	__bad_interrupt	; TIMER0_OVF_addr
+	jmp 	__bad_interrupt	; SPI_STC_addr
+	jmp 	__bad_interrupt	; USART_RX_addr
+	jmp 	__bad_interrupt	; USART_UDRE_addr
+	jmp 	__bad_interrupt	; USART_TX_addr
+	jmp 	__bad_interrupt	; ADC_addr
+	jmp 	__bad_interrupt	; EE_READY_addr
+	jmp 	__bad_interrupt	; ANALOG_COMP_addr
+	jmp 	TWI		; TWI_addr
+	jmp 	__bad_interrupt	; SPM_READY_addr
 
 
 ;==========================================================
 ; Code
 ;==========================================================
 
-;.org 0x0034 ; End of Jump table
-RESET:
+__ctors_end:
 	; Setup stack pointer
 	;ldi	r16, hi8(RAMEND)
 	;out	_SPH, r16
 	;ldi	r16, lo8(RAMEND)
 	;out	_SPL, r16
+	rjmp 	MAIN
 
+__bad_interrupt:
+	reti
+
+MAIN:   
 	; Setup Port D for DDS Output
 	ser	r16		; Configure for output 
 	out	_DDRD, r16
@@ -117,7 +122,6 @@ RESET:
 	
 	sei			; Enable interrupts
 
-MAIN:   
 	; Setup some defaults        
 	LOAD_TABLE	zero_table
 	ldi	r24, 0x00	; Set a default frequency of 1Khz
