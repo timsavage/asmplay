@@ -9,6 +9,24 @@
 ; Registers
 ;=======================================================================
 
+; System control and Reset
+
+.equ MCUSR, 0x54
+.equ WDRF, 3		; Watchdog System Reset Flag
+.equ BORF, 2		; Brown-out Reset Flag
+.equ EXTRF, 1		; External Reset Flag
+.equ PORF, 0		; Power-on Reset Flag
+
+.equ WDTCSR, 0x60	; Watchdog Timer Control Register
+.equ WDIF, 7		; Watchdog Interrupt Flag
+.equ WDIE, 6		; Watchdog Interrupt Enable
+.equ WDP3, 5		; Watchdog Timer Prescaler bit 3
+.equ WDCE, 4		; Watchdog Change Enable
+.equ WDE, 3			; Watchdog System Reset Enable
+.equ WDP2, 2		; Watchdog Timer Prescaler bit 2
+.equ WDP1, 1		; ...
+.equ WDP0, 0		; Watchdog Timer Prescaler bit 0
+
 
 ; I/O Ports
 
