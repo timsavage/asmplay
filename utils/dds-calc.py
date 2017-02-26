@@ -57,8 +57,8 @@ def main():
 
         print("Step size:        {} @ {}{}".format(step_size, opts.TARGET_FREQ, opts.TARGET_UNIT))
         if opts.decompose_step:
-            print("Step size bytes:  {}, {}, {}, {}".format(
-                *['0x{:02X}'.format(step_size >> (b * 8) & 0xFF) for b in range(3, -1, -1)]
+            print("Step size bytes:  {}, {}, {}".format(
+                *['0x{:02X}'.format(step_size >> (b * 8) & 0xFF) for b in range(2, -1, -1)]
             ))
 
         print()
