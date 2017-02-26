@@ -46,7 +46,7 @@ def main():
     print("Wave table size:  {}".format(wts))
     print("-" * 40)
 
-    step_constant = (wts * math.pow(wts, 2)  * cpc) / cfreq
+    step_constant = (wts * math.pow(wts, 2) * cpc) / cfreq
     print("Step Constant:    {:0.6f}".format(step_constant))
 
     if opts.TARGET_FREQ:
