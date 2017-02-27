@@ -41,6 +41,7 @@
 .equ TWI_ACK, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE) 
 .equ TWI_NACK, (1<<TWINT) | (0<<TWEA) | (1<<TWEN) | (1<<TWIE) 
 
+#define	Zero	r1
 
 ;==========================================================
 ; Macros
@@ -107,7 +108,7 @@ __vectors:
 __ctors_end:
 	; Stack pointer setup not required 
 	; atmega328(p) defaults to RAMEND
-	clr	r1		; Zero register
+	clr	Zero		; Zero register
 	rjmp 	MAIN
 
 __bad_interrupt:
@@ -172,7 +173,7 @@ RESET_DDS:
 
 ; Load a DDS waveform (wave on r25)
 DDS_LOAD:
-	lsl	r25
+	;lsl	r25	; Only required for jumps
 	ldi	ZL, lo8(load_table)
 	ldi	ZH, hi8(load_table)
 	add	ZL, r25
