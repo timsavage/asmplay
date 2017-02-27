@@ -22,16 +22,20 @@
 ; Registers
 ;==========================================================
 ;
-; r16	Temp
-;
 ; These registers are used to generate DDS Output
-; r3	Fix Low
-; r4	Fix High
-; r6	Step Byte 0
-; r7	Step Byte 1
-; r8	Step Byte 2
-; r5	Buffer Value
-; 
+
+#define	Zero	r1
+
+#define	Temp	r16
+#define ITemp	r17
+
+#define PhaseL	r3
+#define PhaseH	r4
+#define Value	r5
+#define Step0	r6
+#define Step1	r7
+#define Step2	r8
+
 
 ;==========================================================
 ; Definitions
@@ -41,7 +45,6 @@
 .equ TWI_ACK, (1<<TWINT) | (1<<TWEA) | (1<<TWEN) | (1<<TWIE) 
 .equ TWI_NACK, (1<<TWINT) | (0<<TWEA) | (1<<TWEN) | (1<<TWIE) 
 
-#define	Zero	r1
 
 ;==========================================================
 ; Macros
@@ -62,8 +65,8 @@ copy_loop\@:
 
 ; Clear Int and set control bits
 .macro TWI_CTRL bits=(1<<TWEA)
-	ldi	r16, \bits | (1<<TWINT) | (1<<TWEN) | (1<<TWIE)
-	sts	TWCR, r16
+	ldi	Temp, \bits | (1<<TWINT) | (1<<TWEN) | (1<<TWIE)
+	sts	TWCR, Temp
 .endm
 
 ;==========================================================
@@ -118,23 +121,23 @@ MAIN:
 	cli			; Disable interrupts
 
 	; Setup Port D for DDS Output
-	ser	r16
-	out	_DDRD, r16	; Configure all for output
-	out	_PORTD, r1	; Clear the current output
+	ser	Temp
+	out	_DDRD, Temp	; Configure all for output
+	out	_PORTD, Zero	; Clear the current output
 
 	; Configure I2C (TWI) interface
-	ldi	r16, (0x42<<1)	; Set address to 0x42
-	sts	TWAR, r16
+	ldi	Temp, (0x42<<1)	; Set address to 0x42
+	sts	TWAR, Temp
 	TWI_CTRL (1<<TWEA)
 
 	; Setup some defaults        
-	LOAD_TABLE	triangle_table
-	ldi	r16, 0x62	; Set a default frequency of 1Khz
-	mov	r6, r16
-	ldi	r16, 0x10
-	mov	r7, r16
-	ldi	r16, 0x00
-	mov	r8, r16
+	LOAD_TABLE	sine_table
+	ldi	Temp, 0x62	; Set a default frequency of 1Khz
+	mov	Step0, Temp
+	ldi	Temp, 0x10
+	mov	Step1, Temp
+	ldi	Temp, 0x00
+	mov	Step2, Temp
 	rcall	RESET_DDS
 
 	sei			; Enable interrupts
@@ -142,15 +145,15 @@ MAIN:
 
 DDS_LOOP:
 	; Add step value
-	add	r3, r6		; (1 clock)
-	adc	r4, r7		; (1 clock)
-	adc	YL, r8		; (1 clock)
+	add	PhaseL, Step0	; (1 clock)
+	adc	PhaseH, Step1	; (1 clock)
+	adc	YL, Step2	; (1 clock)
 
 	; Load value from wave buffer
-	ld	r5, Y		; (2 clocks)
+	ld	Value, Y	; (2 clocks)
 
 	; Write value to PORTD (use out as it only uses 1 clock)
-	out	_PORTD, r5	; (1 clock)
+	out	_PORTD, Value	; (1 clock)
 
 	; Check if DDS generation is still active
 	rjmp	DDS_LOOP	; (2 clocks)
@@ -160,9 +163,9 @@ DDS_LOOP:
 ; Reset DDS Counters and set wave buffer pointer to the start
 RESET_DDS:
 	; Reset counters
-        clr     r5              ; Index
-        clr     r3              ; Fix L
-        clr     r4              ; Fix H
+        clr     Value
+        clr     PhaseL
+        clr     PhaseH
 
         ; Set wave buffer pointer to the start of the wave buffer
         ldi     YH, hi8(WAVE_BUFFER)
@@ -173,11 +176,10 @@ RESET_DDS:
 
 ; Load a DDS waveform (wave on r25)
 DDS_LOAD:
-	;lsl	r25	; Only required for jumps
-	ldi	ZL, lo8(load_table)
-	ldi	ZH, hi8(load_table)
+	ldi	ZL, pm_lo8(load_table)
+	ldi	ZH, pm_hi8(load_table)
 	add	ZL, r25
-	adc	ZH, r1
+	adc	ZH, Zero
 	ijmp
 load_table:	; 4 Bits long
 	rjmp	load_zero
@@ -198,59 +200,68 @@ load_table:	; 4 Bits long
 	rjmp    load_zero
 load_zero:
 	LOAD_TABLE	zero_table
-	ldi	r20, 0x00
 	ret
 load_sine:
 	LOAD_TABLE	sine_table
-	ldi	r20, 0x01
 	ret
 load_square:
         LOAD_TABLE      square_table
-        ldi     r20, 0x02
         ret
 load_triangle:
         LOAD_TABLE      triangle_table
-        ldi     r20, 0x04
         ret
 load_sawtooth:
         LOAD_TABLE      sawtooth_table
-        ldi     r20, 0x08
         ret
 load_rsawtooth:
         LOAD_TABLE      rsawtooth_table
-        ldi     r20, 0xF0
         ret
 
 
 ; Handle a DDS command (command in r25)
 DDS_COMMAND:
-	mov	r16, r25	; Get hi 4 bits (command)
-	andi	r16, 0xF0
+	mov	ITemp, r25	; Get hi 4 bits (command)
+	andi	ITemp, 0xF0
 	andi	r25, 0x0F	; Get lo 4 bits (index)
 	
-	cpi	r16, 0x10	; Load
-	brne	dds_cmd2
+	cpi	ITemp, 0x10	; Load
+	brne	dds_cmd1
 	rcall	DDS_LOAD
 	ret	
-dds_cmd2:
-	cpi	r16, 0x20	; Frequency Up
-	brne	dds_cmd3
-	; ...
+dds_cmd1:
+	cpi	ITemp, 0x20	; Frequency Up
+	brne	dds_cmd2
+
+	ldi     ZH, hi8(step_table)
+        ldi     ZL, lo8(step_table)
+	add	ZL, r25
+	lpm	ITemp, Z
+	add	Step0, ITemp
+	adc	Step1, Zero
+	adc	Step2, Zero
+
 	ret
-dds_cmd3:
-	cpi	r16, 0x30	; Frequency Down
+dds_cmd2:
+	cpi	ITemp, 0x30	; Frequency Down
 	brne	dds_cmd_default
-	; ...
+
+	ldi     ZH, hi8(step_table)
+        ldi     ZL, lo8(step_table)
+        add     ZL, r25
+        lpm     ITemp, Z
+        sub     Step0, ITemp
+        sbc     Step1, Zero
+        sbc     Step2, Zero
+
 	ret
 dds_cmd_default:
 	ret			; Return
 
 
 TWI:
-	lds     r16, TWSR	; Load from status register
-	andi	r16, TW_STATUS_MASK	; Mask out pre-scaler bits
-	
-	cpi	r16, TW_SR_DATA_ACK
+	lds     ITemp, TWSR	; Load from status register
+	andi	ITemp, TW_STATUS_MASK	; Mask out pre-scaler bits
+	cpi	ITemp, TW_SR_DATA_ACK
 	brne	twi_default
 	; Data has been received in SR Mode
 	lds     r25, TWDR       ; Store data in r25
@@ -375,4 +386,7 @@ square_table:
         .byte   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
         .byte   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
         .byte   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+
+step_table:
+	.byte	0x00,0x01,0x0A,0x64,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 
