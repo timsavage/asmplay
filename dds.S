@@ -132,9 +132,9 @@ MAIN:
 
 	; Setup some defaults        
 	LOAD_TABLE	sine_table
-	ldi	Temp, 0x62	; Set a default frequency of 1Khz
+	ldi	Temp, 0xC5	; Set a default frequency of 1Khz
 	mov	Step0, Temp
-	ldi	Temp, 0x10
+	ldi	Temp, 0x20
 	mov	Step1, Temp
 	ldi	Temp, 0x00
 	mov	Step2, Temp
