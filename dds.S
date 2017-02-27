@@ -128,10 +128,10 @@ MAIN:
 	TWI_CTRL (1<<TWEA)
 
 	; Setup some defaults        
-	LOAD_TABLE	sine_table
-	ldi	r16, 0xC5	; Set a default frequency of 1Khz
+	LOAD_TABLE	triangle_table
+	ldi	r16, 0x62	; Set a default frequency of 1Khz
 	mov	r6, r16
-	ldi	r16, 0x20
+	ldi	r16, 0x10
 	mov	r7, r16
 	ldi	r16, 0x00
 	mov	r8, r16
