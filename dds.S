@@ -128,7 +128,7 @@ MAIN:
 
 	; Setup some defaults        
 	LOAD_TABLE	sine_table
-	ldi	r16, 0xC5		; Set a default frequency of 1Khz
+	ldi	r16, 0xC5	; Set a default frequency of 1Khz
 	mov	r6, r16
 	ldi	r16, 0x20
 	mov	r7, r16
@@ -138,9 +138,6 @@ MAIN:
 
 	sei			; Enable interrupts
 
-HOLD:
-;	out	_PORTD, r20
-;	rjmp	HOLD		; Temp to block us while developing I2C
 
 DDS_LOOP:
 	; Add step value
@@ -158,6 +155,7 @@ DDS_LOOP:
 	rjmp	DDS_LOOP	; (2 clocks)
 				; (Total: 8)
 
+
 ; Reset DDS Counters and set wave buffer pointer to the start
 RESET_DDS:
 	; Reset counters
@@ -170,6 +168,7 @@ RESET_DDS:
         ldi     YL, lo8(WAVE_BUFFER)
 
 	ret			; Return
+
 
 ; Load a DDS waveform (wave on r25)
 DDS_LOAD:
