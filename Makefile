@@ -9,15 +9,19 @@
 
 PROJECT=ddsGen
 
+# Target hardward
 MCU=atmega328p
 PROGRAMMER=usbtiny
 
+# Includes and source files
 INCLUDES=./include
 SRCS=dds.S
 
+# Fuses
 LFUSE=0xf7
 HFUSE=0xdf
 
+# Flags for compilation stages
 ASFLAGS=-mmcu=$(MCU) -Wa,-I$(INCLUDES) -Wall
 LDFLAGS=
 
@@ -74,4 +78,15 @@ $(ELF_FILE): $(OBJS)
 
 $(OBJS): $(SRCS)
 	$(CC) $(ASFLAGS) -c $< -o $@
+
+help:
+	echo "Available rules:"
+	echo "make [all] - Build hex file and report size"
+	echo "make hex   - Build hex file"
+	echo "make up    - Build and upload hex file to MCU"
+	echo "make fuse  - Set fuses on MCU"
+	echo "make size  - Output size report of assembled file"
+	echo "make dump  - Output a dump of assembled file to less"
+	echo "make clean - Clean up all generated files"
+	echo "make help  - Output this report"
 	
